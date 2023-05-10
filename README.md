@@ -1,7 +1,7 @@
 # Google Smart Tap
 
-<img src="./assets/HEADER.VASONLY.webp" alt="![Smart Tap VAS only]" width=200px>
-<img src="./assets/HEADER.VASANDPAY.webp" alt="![Smart Tap VAS and payment]" width=200px>
+  <img src="./assets/HEADER.VASONLY.webp" alt="![Smart Tap VAS only]" width=200px>
+  <img src="./assets/HEADER.VASANDPAY.webp" alt="![Smart Tap VAS and payment]" width=200px>
 
 Google Smart tap is a proprietary NFC protocol that can be used for sending data from a mobile device to an NFC terminal.
 
@@ -43,12 +43,12 @@ As of version 2.1 following commands are available:
 | Command name             | CLA  | INS  | P1   | P2   | DATA             | LE   | NOTES                                       |
 |--------------------------|------|------|------|------|------------------|------|---------------------------------------------|
 | Select Smart Tap         | 00   | A4   | 04   | 00   | Smart Tap AID    | 00   |                                             |
-| Negotiate secure channel | 90   | 53   | 00   | 00   | Coming soon      | 00   |                                             |
-| Get data                 | 90   | 50   | 00   | 00   | Coming soon      | 00   | Can be used only after channel negotiation  |
+| Negotiate secure channel | 90   | 53   | 00   | 00   | SOON             | 00   |                                             |
+| Get data                 | 90   | 50   | 00   | 00   | SOON             | 00   | Can be used only after channel negotiation  |
 | Get more data            | 90   | C0   | 00   | 00   | No data (V 2.1)  | 00   | Can be used if GET DATA response sw is 9100 |
-| Push data                | 90   | 52   | 00   | 00   | Coming soon      | 00   | Can be used before of after data read. Secure channel not needed. Exact use case of this command is not known. Possible use is to push signup URL but this feature is disabled. |
+| Push data                | 90   | 52   | 00   | 00   | SOON             | 00   | Can be used before of after data read. Secure channel not needed. Exact use case of this command is not known. Possible use is to push signup URL but this feature is disabled. |
 
 
-SmartTap-exclusive commands and responses use NDEF messages and records for conveying infomration. 
+SmartTap-exclusive commands and responses use NDEF messages and records for conveying information. 
 
 
