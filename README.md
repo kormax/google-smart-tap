@@ -5,7 +5,13 @@
 
 Google Smart tap is a proprietary NFC protocol that can be used for sending data from a mobile device to an NFC terminal.
 
-Smart Tap has gone through multiple versions throughout its life. As of writing date the version of this protocol is 2.1. Data can only be read after seucre channel negotiation and only in encrypted form.
+Data is conveyed from the device to the terminal in encrypted form, using keys derived during the channel negotiation.
+
+At the moment of negotiation, the reader sends a device its collector id, key version, and a signature of device data signed using the collector key, thus proving to the device that the reader is allowed to get the information.
+
+Only one pass (object) could be conveyed during a single tap. Reading multiple objects related to separate collector ids and keys is not supported, instead one has to add a collector id to needed pass type to enable them being read by their partner.
+
+Version 2.1 was current at the time of writing.
 
 
 # Application identifiers
