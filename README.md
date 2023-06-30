@@ -1,9 +1,16 @@
 # Google Smart Tap
 
-  <img src="./assets/HEADER.VASONLY.webp" alt="![Smart Tap VAS only]" width=200px>
-  <img src="./assets/HEADER.VASANDPAY.webp" alt="![Smart Tap VAS and payment]" width=200px>
 
-Google Smart tap is a proprietary NFC protocol that can be used for sending data from a mobile device to an NFC terminal.
+<p float="left">
+<img src="./assets/SMARTTAP.VASONLY.DEMO.webp" alt="![Smart Tap VAS only]" width=250px>
+ <img src="./assets/SMARTTAP.VASANDPAY.DEMO.webp" alt="![Smart Tap VAS and payment]" width=250px>
+</p>
+
+
+# Overview
+
+
+Google Smart Tap is a proprietary NFC protocol that can be used for sending data from a mobile device to an NFC terminal.
 
 Data is conveyed from the device to the terminal in encrypted form, using keys derived during the channel negotiation phase. At the moment of negotiation, the reader sends a device its collector id, key version, and a signature of derived data signed using the collector key, thus proving to the device that the reader is allowed to get the information.
 
@@ -52,3 +59,22 @@ As of version 2.1 following commands are available:
 SmartTap-exclusive commands and responses use NDEF messages and records for conveying information. 
 
 
+# Notes
+
+- If you find any mistakes/typos or have extra information to add, feel free to raise an issue or create a pull request.
+- Reverse-engineering efforts were started way before Google published an open-source implementation example at the end of 2022, which made this project somewhat obsolete. There are some aspects still left uncovered (such as data format, parameters, extra commands), goal of this repo would be to describe blind spots in more detail in the near future ©.
+
+
+# References
+
+
+- Google resources:
+  - [Google Smart Tap](https://developers.google.com/wallet/smart-tap);
+  - [Smart Tap overview](https://developers.google.com/wallet/smart-tap/introduction/overview);
+  - [Smart Tap communication flow](https://developers.google.com/wallet/smart-tap/introduction/communication-flow);
+  - [Smart Tap example project](https://github.com/google-pay/smart-tap-sample-app). Note that it does not implement the full protocol, for instance "Get more data" and "Push data" commands are missing;
+- Analysed applications:
+  - [Google Play services](https://play.google.com/store/apps/details?id=com.google.android.gms&hl=en_US);
+  - [Google Wallet](https://wallet.google).
+- Software analysis tools:
+  - [Jadx](https://github.com/skylot/jadx).
