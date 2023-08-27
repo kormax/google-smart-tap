@@ -810,7 +810,7 @@ Response data example:
 
 ## NEGOTIATE SECURE CHANNEL Signature
 
-During the NEGOTIATE SECURE CHANNEL command, reader has to prove to the device that it is allowd to retreive particular objects (read as passes).  
+During the NEGOTIATE SECURE CHANNEL command, reader has to prove to the device that it is allowed to retreive particular objects (read as passes).  
 
 To generate a proof, device uses a collector private key in order to sign following data retreived prior during communication:
 
