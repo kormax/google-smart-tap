@@ -135,7 +135,7 @@ Following types exist in SmartTap, but not all of them are used:
 | CRYPTO_PARAMS               | cpr  | 32 byte long reader nonce, 1 byte long auth flag, 33 byte long reader ephemeral public key, 4 byte long key version, NDEF message with `sig` and `cld` records |
 | SIGNATURE                   | sig  | BINARY format flag + 72 byte long signature data encoded in ASN1 as Dss-Sig-Value                                                                              |
 | SERVICE_REQUEST             | srq  | 2 byte long version, nested NDEF message with `ses`, `mer`, `slr`, `pcr` records                                                                               |
-| ADDITIONAL_SERVICE          | asr  |                                                                                                                                                                |
+| ADDITIONAL_SERVICE_REQUEST  | asr  | Was used to get data continuation. Unused in SmartTap 2.0                                                                                                                                                               |
 | SERVICE_RESPONSE            | srs  | Contains nested `ses` and `reb` records                                                                                                                        |
 | MERCHANT                    | mer  | Nested NDEF message with mandatory `cld` and optional `lid`, `tid`, `mnr`, `mcr` records                                                                       |
 | COLLECTOR_ID_V0             | mid  |                                                                                                                                                                |
@@ -185,6 +185,8 @@ Following types exist in SmartTap, but not all of them are used:
 | BASKET_PRICE_AMOUNT         | mon  | Numeric price value                                                                                                                                            |
 | BASKET_PRICE_CURRENCY       | ccd  | NDEF encoded text currency code                                                                                                                                |
 
+Records marked as `Object` in value are transmitted in GET DATA response.  
+Inner fields of objects depend on object type, but usually, each object contains at least `i` and `n` records in nested NDEF message.
 
 ## Statuses
 
@@ -320,13 +322,447 @@ PUSH DATA seems to be cut or limited in newer versions of SmartTap. This info is
 | UNKNOWN          | 0xFF  |
 
 
-# Commands
+# Command and response data format
 
-**TODO**
+## Status words
+
+Following status words may be met during proper communication
+
+| SW1 | SW2 | Meaning                 |
+| --- | --- | ----------------------- |
+| 90  | 00  | Ok                      |
+| 90  | 91  | More data pending       |
+| 90  | 01  | No passes               |
+| 94  | 06  | Too many requests       |
+| 93  | 02  | User has to choose pass |
+
+## SELECT VAS APPLET
+
+### Request:
+
+   | CLA | INS | P1  | P2  | DATA                   | LE  | 
+   | --- | --- | --- | --- | ---------------------- | --- |
+   | 00  | A4  | 04  | 00  | `4f53452e5641532e3031` | 00  | 
+
+   Data contains an ASCII encoded form of "OSE.VAS.01" string;
+
+### Response
+   
+   | SW1 | SW2 | DATA                                       |
+   | --- | --- | ------------------------------------------ |
+   | 90  | 00  | Dynamic. Data format below. 135 bytes long |
+
+
+   Response data example:  
+   - Payload:
+     - `6f8184500a416e64726f6964506179c0020001c108cc00000000008080c22056d2ec8f857f0049aa54f1ca1de2791b5693a7014e6e4565d5644b1c2a305136c32103dfee38dbdb68a607383ad622640b180cc7e27d796b4e788c40e5d994291c71fca523bf0c20611e4f09a000000476d0000111870101730edf6d020000df4d020001df620103`
+   - TLV decoded:
+      ```
+      TLV:
+        6f[8184]: # File Control Information Template
+            50[0a]: # Application Label
+               416e64726f6964506179 # ASCII form of "AndroidPay"
+            c0[02]: # Application version
+               0001
+            c1[08]: # Unknown. Feature flags?
+               cc00000000008080
+            c2[20]: # Mobile device Nonce
+               56d2ec8f857f0049aa54f1ca1de2791b5693a7014e6e4565d5644b1c2a305136
+            c3[21]: # Mobile device ephemeral key
+               03dfee38dbdb68a607383ad622640b180cc7e27d796b4e788c40e5d994291c71fc
+            a5[23]: 
+               bf0c[20]:
+                  61[1e]:
+                     4f[09]: # Application ID
+                        a000000476d0000111
+                     87[01]: # Priority
+                        01
+                     73[0e]: # Proprietary data
+                        df6d[02]: # Minimum version
+                           0000
+                        df4d[02]: # Maximum version
+                           0001
+                        df62[01]: # Unknown. Format flags?
+                           03
+      ```
+
+      Tags `c1`, `c2`, `c3`, `a5`, `73` may be missing depending on device software version. Be aware of this fact.  
+
+   
+## SELECT SMART TAP APPLET
+
+### Request:
+
+   | CLA | INS | P1  | P2  | DATA                 | LE  |
+   | --- | --- | --- | --- | -------------------- | --- |
+   | 00  | A4  | 04  | 00  | `a000000476d0000111` | 00  |
+
+### Response
+   
+   | SW1 | SW2 | DATA                                      |
+   | --- | --- | ----------------------------------------- |
+   | 90  | 00  | Dynamic. Data format below. 47 bytes long |
+
+Response data example:  
+   - Payload:
+     - `00000001dc0321036d646e6d646e0456d2ec8f857f0049aa54f1ca1de2791b5693a7014e6e4565d5644b1c2a305136`
+   - Decoded:
+      ```
+      min_version=0000
+      max_version=0001
+      message=NDEFMessage(
+         NDEFRecord(
+            tnf=EXTERNAL(04), 
+            type=bytearray(b'mdn'), 
+            id=bytearray(b'mdn'), 
+            payload=0x0456d2ec8f857f0049aa54f1ca1de2791b5693a7014e6e4565d5644b1c2a305136
+         )
+      )
+      ```
+
+## NEGOTIATE SECURE CHANNEL
+
+### Request:
+
+   | CLA | INS | P1  | P2  | DATA                        | LE  |
+   | --- | --- | --- | --- | --------------------------- | --- |
+   | 90  | 53  | 00  | 00  | Dynamic. Data format below. | 00  |
+
+Command data example:
+   - Payload:
+     - `d403b86e6772000194030a7365736b159a80fc8283fd00015403a0637072a8aa2bae1ba891783d8c5be8a95bf2f9e5bb90fd9d197f8b2b1a84d9cc80427501027b2e12f1a1a542084b4d01b8799380fa4cb77e530ba2305b0bf2b3e4b474fe7d0000000194034973696704304602210086e43dc483b22e51aa177ae8112ed83d399a58b41d6d8cbe900cde03c4524da5022100e94b6a919c9e097568f4efa9a7123b86b97ee44342593f8a77fc9e12e3f95ae4540305636c640401020304`
+   - Decoded:
+      ```
+      message=NDEFMessage(
+         NDEFRecord(
+            tnf=EXTERNAL(04),
+            type=b'ngr',
+            id=b'',
+            payload=[
+               Version(00:01), 
+               NDEFMessage(
+                  NDEFRecord(
+                     tnf=EXTERNAL(04),
+                     type=b'ses',
+                     id=b'',
+                     payload=[
+                        0x6b159a80fc8283fd,
+                        0x00, 
+                        OK(01)
+                     ]
+                  ), 
+                  NDEFRecord(
+                     tnf=EXTERNAL(04),
+                     type=b'cpr',
+                     id=b'',
+                     payload=[
+                        0xa8aa2bae1ba891783d8c5be8a95bf2f9e5bb90fd9d197f8b2b1a84d9cc804275, 
+                        0x01, 
+                        0x027b2e12f1a1a542084b4d01b8799380fa4cb77e530ba2305b0bf2b3e4b474fe7d,
+                        0x00000001,
+                        NDEFMessage(
+                           NDEFRecord(
+                              tnf=EXTERNAL(04),
+                              type=b'sig',
+                              id=b'',
+                              payload=[
+                                 BINARY(04), 
+                                 0x304602210086e43dc483b22e51aa177ae8112ed83d399a58b41d6d8cbe900cde03c4524d
+                                    a5022100e94b6a919c9e097568f4efa9a7123b86b97ee44342593f8a77fc9e12e3f95ae4
+                              ]
+                           ), 
+                           NDEFRecord(
+                              tnf=EXTERNAL(04),
+                              type=b'cld',
+                              id=b'',
+                              payload=[
+                                 BINARY(04), 
+                                 0x01020304
+                              ]
+                           )
+                        )
+                     ]
+                  )
+               )
+            ]
+         )
+      )
+      ```
+
+### Response
+   
+   | SW1 | SW2 | DATA                                      |
+   | --- | --- | ----------------------------------------- |
+   | 90  | 00  | Dynamic. Data format below. 61 bytes long |
+
+Response data example:  
+   - Payload:
+     - `d403376e727394030a7365736b159a80fc8283fd010154032164706b03dfee38dbdb68a607383ad622640b180cc7e27d796b4e788c40e5d994291c71fc`
+   - Decoded:
+      ```
+      NDEFMessage(
+         NDEFRecord(
+            tnf=EXTERNAL(04), 
+            type=bytearray(b'nrs'),
+            id=bytearray(b''),
+            payload=NDEFMessage(
+               NDEFRecord(
+                  tnf=EXTERNAL(04),
+                  type=b'ses',
+                  id=b'',
+                  payload=[
+                     0x6b159a80fc8283fd,
+                     0x01,
+                     0x01
+                  ]
+               ),
+               NDEFRecord(
+                  tnf=EXTERNAL(04),
+                  type=b'dpk',
+                  id=b'',
+                  payload=[
+                     0x03dfee38dbdb68a607383ad622640b180cc7e27d796b4e788c40e5d994291c71fc
+                  ]
+               )
+            )
+         )
+      )
+      ```
+
+## GET DATA
+
+### Request:
+
+   | CLA | INS | P1  | P2  | DATA                        | LE  |
+   | --- | --- | --- | --- | --------------------------- | --- |
+   | 90  | 50  | 00  | 00  | Dynamic. Data format below. | 00  |
+
+Command data example:
+   - Payload:
+     - `d4033b737271000194030a7365736b159a80fc8283fd010114030b6d6572d40305636c640401020304140307736c72d40301737472005403057063724100000004`
+   - Decoded:
+      ```
+      message=NDEFMessage(
+         NDEFRecord(
+            tnf=EXTERNAL(04), 
+            type=b'srq', 
+            id=b'', 
+            payload=[
+               Version(00:01), 
+               NDEFMessage(
+                  NDEFRecord(
+                     tnf=EXTERNAL(04), 
+                     type=b'ses', 
+                     id=b'', 
+                     payload=[
+                        0x6b159a80fc8283fd,
+                        0x01,
+                        OK(01)
+                     ]
+                  ),
+                  NDEFRecord(
+                     tnf=EXTERNAL(04),
+                     type=b'mer',
+                     id=b'',
+                     payload=NDEFMessage(
+                        NDEFRecord(
+                           tnf=EXTERNAL(04),
+                           type=b'cld',
+                           id=b'',
+                           payload=[
+                              BINARY(04),
+                              0x01020304
+                           ]
+                        )
+                     )
+                  ), 
+                  NDEFRecord(
+                     tnf=EXTERNAL(04),
+                     type=b'slr',
+                     id=b'',
+                     payload=NDEFMessage(
+                        NDEFRecord(
+                           tnf=EXTERNAL(04),
+                           type=b'str',
+                           id=b''
+                           payload=0x00
+                        )
+                     )
+                  ), 
+                  NDEFRecord(
+                     tnf=EXTERNAL(04),
+                     type=b'pcr',
+                     id=b'',
+                     payload=[SYSTEM_ZLIB_SUPPORTED(40) + SYSTEM_STANDALONE(01), 0x00, 0x00, 0x00, TAP_PASS_AND_PAYMENT(04)]
+                  )
+               )
+            ]
+         )
+      )
+      ```
+
+### Response:
+
+   | SW1 | SW2 | DATA                        |
+   | --- | --- | --------------------------- |
+   | XX  | XX  | Dynamic. Data format below. |
+
+Status word differs if:
+1) Pass data is available;
+2) Pass data is available, but more data is pending;
+3) Pass data is unavailable;
+4) User has to select a pass
+
+Response may contain a part or a full NDEF message with nested encrypted and or compressed nested NDEF message
+
+Full* response data example:
+   - Payload:
+     - `d403ce73727394030a7365736b159a80fc8283fd02015403b8726562031c5b7d2e9f0f6937a7c043dc6913dd976002ce5cf179dedbcaaab629442a89a72b6a92caa26e808903a6d02207fd2d42702161d21c76f0a2a135bd8d45ac796786787e268bcc7498d17eccab47ad98be601a3470618fcd9790b40e3c324fc01ec29a98d1cb784fd4390ea1b045437cfdfa121447854c5ae5375c3f721a7a9f80b7da35868e063f18c545f07d934e4cc557fc93ee52b6231c95ef2d2d1de6be82be0d76e8d555dc41cc4894e44af98c68e4245e5bb6cecc`
+   - Decoded:
+     ```
+      message=NDEFMessage(
+         NDEFRecord(
+            tnf=EXTERNAL(04),
+            type=b'srs',
+            id=b'',
+            payload=NDEFMessage(
+               NDEFRecord(
+                  tnf=EXTERNAL(04), 
+                  type=b'ses', 
+                  id=b'', 
+                  payload=[
+                     0x6b159a80fc8283fd,
+                     0x02,
+                     OK(01)
+                  ]
+               ),
+               NDEFRecord(
+                  tnf=EXTERNAL(04), 
+                  type=b'reb', 
+                  id=b'', 
+                  payload=0x031c5b7d2e9f0f6937a7c043dc6913dd976002ce5cf179dedbcaaab629442a89a72b6a92caa26e808903a6d02207fd2d42702161d21c76f0a2a135bd8d45ac796786787e268bcc7498d17eccab47ad98be601a3470618fcd9790b40e3c324fc01ec29a98d1cb784fd4390ea1b045437cfdfa121447854c5ae5375c3f721a7a9f80b7da35868e063f18c545f07d934e4cc557fc93ee52b6231c95ef2d2d1de6be82be0d76e8d555dc41cc4894e44af98c68e4245e5bb6cecc
+               )
+            )
+         )
+      )
+     ```
+
+## GET MORE DATA
+
+### Request:
+
+   | CLA | INS | P1  | P2  | DATA | LE  |
+   | --- | --- | --- | --- | ---- | --- |
+   | 90  | c0  | 00  | 00  | None | 00  |
+
+### Response:
+
+Same format and rules as in GET DATA
+
+
+# Cryptography
+
+## NEGOTIATE SECURE CHANNEL Signature
+
+During the NEGOTIATE SECURE CHANNEL command, reader has to prove to the device that it is allowd to retreive particular objects (read as passes).
+To generate a proof, device uses a collector private key in order to sign following data retreived prior during communication:
+
+| Order | Name                              | Length | Example                                                            | Notes |
+| ----- | --------------------------------- | ------ | ------------------------------------------------------------------ | ----- |
+| 1     | reader_nonce                      | 32     | 7131b05f5cfbd94feae19204d59d4ee5a4ce8172462e3f4577426040916e5b48   |       |
+| 2     | device_nonce                      | 32     | 00f363e09bd98d971bda253bb5e001e554d5255b6adf0713c8bfc7eea4e3957f   |       |
+| 3     | collector_id                      | 4      | 01020304                                                           |       |
+| 4     | reader_ephemeral_public_key_bytes | 33     | 03c3d36bf9509924f159e9b5f02cb3d479d2fde4dedde1a8054fd5018286b2e6f8 |       |
+
+When concatenated, the byte string to sign would be:  
+```
+data_to_sign = 7131b05f5cfbd94feae19204d59d4ee5a4ce8172462e3f4577426040916e5b4800f363e09bd98d971bda253bb5e001e554d5255b6adf0713c8bfc7eea4e3957f0102030403c3d36bf9509924f159e9b5f02cb3d479d2fde4dedde1a8054fd5018286b2e6f8`
+```
+
+Then, using reader long term private key (the version of which is defined inside `cpr` record), device generates a 72-byte long ASN1 encoded Dss-Sig-Value signature:
+```
+signature = 3046022100cc4414b542a2fc42d41a29da56e897cb38593380fe529d473f24b8c450f422c7022100f0160f981dd28ec2842f8ed5e9adc533b685258987fd602815caf88aa08f8ddd
+```
+
+Keep values of `data_to_sign` and `signature` in mind, as they'll be used later for session key generation.
+
+## GET DATA Encryption
+
+To decrypt GET DATA response payload, we have to establish encryption keys.
+
+
+Shared key is generated using ECDH exchange of ephemeral device public and reader private keys:
+   
+```
+shared_key = ECDH(reader_ephemeral_private_key, device_ephemeral_public_key)
+```
+
+Then, using the HKDF, data is generated with following parameters
+
+| Name         | Value                             |
+| ------------ | --------------------------------- |
+| algorithm    | SHA256                            |
+| length       | 48                                |
+| salt         | device_ephemeral_public_key_bytes |
+| shared_info  | data_to_sign  + signature         |
+| key_material | shared_key                        |
+
+As a result, we get 48 bytes of keying material `derived_ephemeral_key`.
+
+First 16 bytes are used as an AES encryption key:  
+`aes_key=derived_ephemeral_key[:16]`  
+
+Next 32 bytes are used for HMAC key:  
+`hmac_key=derived_ephemeral_key[16:]`
+
+Those keys are used to verify and decrypt GET DATA responses:
+Encryption/Decryption uses AES CTR algorithm.
+
+IV is provided in first 12 bytes of payload:  
+`iv = payload[:12]`  
+Ciphertext is the middle bytes starting from 12 and ending with -32 from the end:  
+`ciphertext = payload[12:-32]`  
+HMAC is provided in last 32 bytes of payload:  
+`hmac = payload[-32:]`  
+
+HMAC has to be verified over whole IV + Ciphertext value.
+For decryption, IV is appended with zero bytes until it's length becomes 16.
+
+Following Python pseudocode (with cryptography library) decribes the decryption proccess:  
+```
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.hmac import HMAC
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+iv = payload[:12]
+ciphertext = payload[12:-32]
+hmac = payload[-32:]
+
+h = HMAC(hmac_key, hashes.SHA256())
+h.update(iv + ciphertext)
+hmac_to_verify = h.finalize()
+
+cipher = Cipher(algorithms.AES(aes_key), modes.CTR(iv + (b'\x00' * (16 - len(iv)))))
+decryptor = cipher.decryptor()
+decrypted_data = decryptor.update(ciphertext) + decryptor.finalize()
+payload = decrypted_data
+```
+
+# Other
+
+## Compression
+
+If ZLIB support has been toggled on in POS capabilities, inner decrypted payload will be compressed with ZLIB.
+To uncompress, use libraries or methods depending on your programming language of choice.  
 
 # Notes
 
 - If you find any mistakes/typos or have extra information to add, feel free to raise an issue or create a pull request.
+- Information provided in this repository is intended for educational, research, and personal use. Its use in any other way is not encouraged.  
+- **Beware** that SmartTap, just like any other proprietary technology, might be a subject to legal protections depending on jurisdiction. A mere fact of it being reverse-engineered **does not** always mean that it can be used in a commercial product as-is without causing an infringement. For use in commercial applications, you should contact Google through official channels in order to get approval.
 - Reverse-engineering efforts were started way before Google published an open-source implementation example at the end of 2022, which made this project somewhat obsolete.  
   There are some aspects still left uncovered (such as data format, parameters, extra commands), goal of this repo would be to describe blind spots in more detail in the near future ©, plus to provide examples, such as communication logs.
 
