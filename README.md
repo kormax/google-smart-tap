@@ -660,11 +660,158 @@ Full* response data example:
 Same format and rules as in GET DATA
 
 
+## PUSH DATA
+
+** This command has no effect and seems to be a leftover from unfinished/cut functionality. **
+Information is provided for reference only
+
+### Request:
+
+   | CLA | INS | P1  | P2  | DATA                        | LE  |
+   | --- | --- | --- | --- | --------------------------- | --- |
+   | 90  | 52  | 00  | 00  | Dynamic. Data format below. | 00  |
+
+Command data example:
+   - Payload:
+     - `d403b9737072000194030a7365736b159a80fc8283fd02011403126270729403016d6f6e0059010303546363645553441403246e73720599010703546e737402656e5041535359010c03556e7375046578616d706c652e636f6d54035f7373729403096f696404010203dc3be19e4814034373756701990116035473757402656e534552564943455f55534147455f5449544c4559011c035473756402656e534552564943455f55534147455f4445534352495054494f4e54030173757005`
+   - Decoded:
+   ```
+   message=NDEFMessage(
+      NDEFRecord(
+         tnf=EXTERNAL(04),
+         type=b'spr',
+         id=b'',
+         payload=[
+            Version(00:01),
+            NDEFMessage(
+               NDEFRecord(
+                  tnf=EXTERNAL(04),
+                  type=b'ses',
+                  id=b'',
+                  payload=[0x6b159a80fc8283fd, 0x02, OK(01)]
+               ), 
+               NDEFRecord(
+                  tnf=EXTERNAL(04),
+                  type=b'bpr',
+                  id=b'',
+                  payload=NDEFMessage(
+                     NDEFRecord(
+                        tnf=EXTERNAL(04),
+                        type=b'mon',
+                        id=b'',
+                        payload=0x00
+                     ), 
+                     NDEFRecord(
+                        tnf=WELL_KNOWN(01),
+                        type=b'T',
+                        id=b'ccd',
+                        payload=b'USD'
+                     )
+                  ) 
+               ), 
+               NDEFRecord(
+                  tnf=EXTERNAL(04), 
+                  type=b'nsr', 
+                  id=b'', 
+                  payload=[
+                     SIGNUP(05), 
+                     NDEFMessage(
+                        NDEFRecord(
+                           tnf=WELL_KNOWN(01),
+                           type=b'T',
+                           id=b'nst',
+                           payload=0x02656e50415353
+                        ), 
+                        NDEFRecord(
+                           tnf=WELL_KNOWN(01),
+                           type=b'U',
+                           id=b'nsu',
+                           payload=0x046578616d706c652e636f6d
+                        )
+                     )
+                  ]
+               ), 
+               NDEFRecord(
+                  tnf=EXTERNAL(04),
+                  type=b'ssr',
+                  id=b'',
+                  payload=NDEFMessage(
+                     NDEFRecord(
+                        tnf=EXTERNAL(04),
+                        type=b'oid',
+                        id=b'',
+                        payload=[BINARY(04), 0x01, 0x02, 0x03, 0xdc, 0x3b, 0xe1, 0x9e, 0x48]
+                     ), 
+                     NDEFRecord(
+                        tnf=EXTERNAL(04),
+                        type=b'sug',
+                        id=b'',
+                        payload=[
+                           SUCCESS(01), 
+                           NDEFMessage(
+                              NDEFRecord(
+                                 tnf=WELL_KNOWN(01),
+                                 type=b'T',
+                                 id=b'sut',
+                                 payload=02656e534552564943455f55534147455f5449544c45
+                              ), 
+                              NDEFRecord(
+                                 tnf=WELL_KNOWN(01),
+                                 type=b'T',
+                                 id=b'sud',
+                                 payload=02656e534552564943455f55534147455f4445534352495054494f4e
+                              )
+                           )
+                        ]
+                     ), 
+                     NDEFRecord(
+                        tnf=EXTERNAL(04),
+                        type=b'sup',
+                        id=b'',
+                        payload=[FREE(05)]
+                     )
+                  )
+               )
+            )
+         ]
+      )
+   )
+   ```
+
+### Response
+   
+   | SW1 | SW2 | DATA                                      |
+   | --- | --- | ----------------------------------------- |
+   | 90  | 00  | Dynamic. Data format below. 61 bytes long |
+
+Response data example:  
+   - Payload:
+     - `d40310707372d4030a7365736b159a80fc8283fd0301`
+   - Decoded:
+      ```
+      message=NDEFMessage(
+         NDEFRecord(
+            tnf=EXTERNAL(04),
+            type=b'psr',
+            id=b'',
+            payload=NDEFMessage(
+               NDEFRecord(
+                  tnf=EXTERNAL(04),
+                  type=b'ses',
+                  id=b'',
+                  payload=0x6b159a80fc8283fd0301
+               )
+            )
+         )
+      )
+      ```
+
 # Cryptography
 
 ## NEGOTIATE SECURE CHANNEL Signature
 
-During the NEGOTIATE SECURE CHANNEL command, reader has to prove to the device that it is allowd to retreive particular objects (read as passes).
+During the NEGOTIATE SECURE CHANNEL command, reader has to prove to the device that it is allowd to retreive particular objects (read as passes).  
+
 To generate a proof, device uses a collector private key in order to sign following data retreived prior during communication:
 
 | Order | Name                              | Length | Example                                                            | Notes |
