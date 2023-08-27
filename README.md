@@ -662,7 +662,7 @@ Same format and rules as in GET DATA
 
 ## PUSH DATA
 
-** This command has no effect and seems to be a leftover from unfinished/cut functionality. **
+**This command has no effect and seems to be a leftover from unfinished/cut functionality.**  
 Information is provided for reference only
 
 ### Request:
